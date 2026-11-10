@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Well Reach Logistics — Sign in</title>
+<style>
+body{margin:0}
+.wg{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;overflow:auto;background:linear-gradient(135deg,#4b2683,#2a1450);font:15px system-ui,"Segoe UI",Arial,sans-serif;color:#222}
+.wg *{box-sizing:border-box}
+.wg .card{background:#fff;width:min(410px,92vw);padding:30px;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+.wg h1{margin:0 0 4px;font-size:20px;letter-spacing:1px;color:#4b2683}
+.wg .sub{margin:0 0 14px;color:#666;font-size:13px}
+.wg label{display:block;margin:12px 0 4px;font-size:12px;font-weight:700;color:#444}
+.wg input{width:100%;padding:11px;border:1px solid #ccc;border-radius:8px;font:inherit}
+.wg input:read-only{background:#f1eef7}
+.wg button{width:100%;margin-top:18px;padding:12px;border:0;border-radius:8px;background:#4b2683;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.wg button:disabled{opacity:.6}
+.wg .err{color:#b00020;font-size:13px;min-height:18px;margin-top:10px}
+.wg .note{background:#fff7e0;border:1px solid #f0d58a;border-radius:8px;padding:8px 10px;font-size:12px;color:#6b5200;margin-bottom:6px}
+</style></head><body>
+<main class="wg" id="wrlGate"><form class="card" id="wgF" autocomplete="on">
+  <h1>WELL REACH LOGISTICS</h1><div class="sub" id="wgSub">Loading…</div>
+  <label>Username</label><input id="wgU" name="username" autocomplete="username">
+  <div id="wgCodeBox" hidden><label>Setup code <span style="font-weight:400">(from server environment SETUP_CODE)</span></label><input id="wgC" autocomplete="off"></div>
+  <label>Password</label><input id="wgP" type="password" autocomplete="current-password">
+  <div id="wgConfBox" hidden><label>Confirm password</label><input id="wgP2" type="password" autocomplete="new-password"></div>
+  <button id="wgB" type="submit">Sign in</button><div class="err" id="wgErr"></div>
+</form></main>
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)},setup=false;
+fetch('auth/status').then(function(r){return r.json()}).then(function(s){
+  if(s.error){$('wgSub').textContent=s.error;return}
+  setup=!!s.setup;
+  $('wgSub').textContent=setup?'First logon — create the Admin account (password minimum 8 characters).':'Sign in with your username and password.';
+  if(setup){
+    $('wgU').value='admin';
+    $('wgCodeBox').hidden=false;$('wgConfBox').hidden=false;$('wgP').autocomplete='new-password';$('wgB').textContent='Create admin & sign in';
+    (($('wgC').value)?$('wgP'):$('wgC')).focus();
+  } else $('wgP').focus();
+}).catch(function(){$('wgSub').textContent='Cannot reach the server.'});
+$('wgF').onsubmit=function(e){
+  e.preventDefault();$('wgErr').textContent='';var pw=$('wgP').value;
+  if(setup&&pw!==$('wgP2').value){$('wgErr').textContent='Passwords do not match.';return}
+  $('wgB').disabled=true;
+  fetch(setup?'auth/setup':'auth/login',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(setup?{code:$('wgC').value,username:$('wgU').value,password:pw}:{username:$('wgU').value,password:pw})})
+  .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j}})})
+  .then(function(x){if(x.ok){if(window.onWrlSignedIn)window.onWrlSignedIn();else location.reload()}
+    else{$('wgErr').textContent=x.j.error||'Failed.';$('wgB').disabled=false}})
+  .catch(function(){$('wgErr').textContent='Cannot reach the server.';$('wgB').disabled=false});
+};
+})();
+</script></body></html>
